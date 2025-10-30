@@ -34,7 +34,6 @@ public class Checker {
     private void visit(ASTNode node) {
         if (node == null) return;
 
-        // Node-specifieke checks
         if (node instanceof Declaration declaration) {
             checkDeclaration(declaration);
         } else if (node instanceof Operation operation) {
@@ -59,10 +58,6 @@ public class Checker {
         }
     }
 
-    // ------------------------------------------------------------
-    // CH06 - Scope
-    // ------------------------------------------------------------
-
     private void checkScope(VariableReference reference) {
         if (!isDefined(reference.name)) {
             reference.setError("variable out of scope");
@@ -75,10 +70,6 @@ public class Checker {
         }
         return false;
     }
-
-    // ------------------------------------------------------------
-    // CH01 - Variabele-resolutie
-    // ------------------------------------------------------------
 
     private Expression resolveVariable(VariableReference reference) {
         for (int i = 0; i < variableTypes.getSize(); i++) {
@@ -95,10 +86,6 @@ public class Checker {
         if (expression instanceof Operation op) return checkOperation(op);
         return null;
     }
-
-    // ------------------------------------------------------------
-    // CH04 - Declaraties
-    // ------------------------------------------------------------
 
     private void checkDeclaration(Declaration declaration) {
         Expression raw = declaration.expression;
@@ -119,10 +106,6 @@ public class Checker {
             default -> declaration.setError("unknown property name");
         }
     }
-
-    // ------------------------------------------------------------
-    // CH02 + CH03 - Operaties
-    // ------------------------------------------------------------
 
     private enum Kind { PIXEL, PERCENTAGE, SCALAR, COLOR, BOOL, UNKNOWN }
 
@@ -145,7 +128,6 @@ public class Checker {
         Expression left = unwrap(operation.lhs);
         Expression right = unwrap(operation.rhs);
 
-        // CH03: verbied booleans/kleuren ergens in de boom
         if (containsType(left, BoolLiteral.class) || containsType(right, BoolLiteral.class)) {
             operation.setError("operation cant contain boolean");
             return null;
@@ -155,23 +137,20 @@ public class Checker {
             return null;
         }
 
-        // Recursief eerst sub-operaties valideren zodat hun resultaat-typen bekend zijn
         if (left instanceof Operation lop) left = checkOperation(lop);
         if (right instanceof Operation rop) right = checkOperation(rop);
 
-        // Literal types bepalen
         Literal lLit = resolveToLiteral(left);
         Literal rLit = resolveToLiteral(right);
         Kind lk = kindOf(lLit);
         Kind rk = kindOf(rLit);
 
-        // CH02: regels per operator
+
         if (operation instanceof AddOperation || operation instanceof SubtractOperation) {
             boolean sameNumeric = (lk == rk) && (lk == Kind.PIXEL || lk == Kind.PERCENTAGE || lk == Kind.SCALAR);
             if (!sameNumeric) {
                 operation.setError("plus/min operands must have same unit or both scalar");
             }
-            // Resultaat: bij +/− is het resultaat van hetzelfde soort als de operanden
             return lLit != null ? lLit : rLit;
 
         } else if (operation instanceof MultiplyOperation) {
@@ -179,10 +158,9 @@ public class Checker {
             if (!oneScalar) {
                 operation.setError("multiply requires at least one scalar operand");
             }
-            // Resultaattype: neem de niet-scalar indien aanwezig; anders scalar
             if (lk == Kind.SCALAR && (rk == Kind.PIXEL || rk == Kind.PERCENTAGE)) return rLit;
             if (rk == Kind.SCALAR && (lk == Kind.PIXEL || lk == Kind.PERCENTAGE)) return lLit;
-            // beide scalars of onbekend
+
             return lLit != null ? lLit : rLit;
         }
 

@@ -19,12 +19,12 @@ public class Evaluator implements Transform {
     private IHANLinkedList<HashMap<String, Expression>> variableValues;
 
     public Evaluator() {
-        variableValues = new HANLinkedList();
+        variableValues = new HANLinkedList<>();
     }
 
     @Override
     public void apply(AST ast) {
-        variableValues = new HANLinkedList();
+        variableValues = new HANLinkedList<>();
 
         transformSheet(ast.root);
     }
