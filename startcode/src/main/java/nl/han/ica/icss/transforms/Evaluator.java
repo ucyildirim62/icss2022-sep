@@ -37,13 +37,14 @@ public class Evaluator implements Transform {
         variableValues.addFirst(new HashMap<>());
         ArrayList<ASTNode> toRemove = new ArrayList<>();
         for (int i = 0; i < sheet.getChildren().size(); i++) {
-            if (sheet.getChildren().get(i) instanceof VariableAssignment) {
-                addVar((VariableAssignment) sheet.getChildren().get(i));
-                toRemove.add(sheet.getChildren().get(i));
+            ASTNode currentEl = sheet.getChildren().get(i);
+            if (currentEl instanceof VariableAssignment) {
+                addVar((VariableAssignment) currentEl);
+                toRemove.add(currentEl);
             }
 
-            if (sheet.getChildren().get(i) instanceof Stylerule) {
-                transformStyleRule((Stylerule) sheet.getChildren().get(i));
+            if (currentEl instanceof Stylerule) {
+                transformStyleRule((Stylerule) currentEl);
             }
         }
 
@@ -57,7 +58,6 @@ public class Evaluator implements Transform {
     /**
      addVar(VariableAssignment var): Deze methode voegt een variabele toe aan de lijst van variabele waarden en controleert of deze al bestaat in de huidige scope.
      */
-
     private void addVar(VariableAssignment var) {
 
         boolean exists = false;
@@ -91,7 +91,6 @@ public class Evaluator implements Transform {
             }
             if (rule.getChildren().get(i) instanceof VariableAssignment) {
                 addVar((VariableAssignment) rule.getChildren().get(i));
-                //toRemove.add(rule.getChildren().get(i));
             }
         }
 
@@ -111,7 +110,6 @@ public class Evaluator implements Transform {
     /**
      * TR01 - Evalueer expressies. Schrijf een transformatie in Evaluator die alle Expression knopen in de AST
      * door een Literal knoop met de berekende waarde vervangt:
-     * <p>
      * Deze methode evalueert een expressie en vervangt deze door een Literal knoop met de berekende waarde.
      * Hiermee wordt voldaan aan eis TR01.
      */
@@ -132,42 +130,44 @@ public class Evaluator implements Transform {
     }
 
     /**
+     * Hulpmethode: transformeert één operand (Operation of VariableReference) naar een Expression/Literal.
+     */
+    private Expression transformOperand(Expression expr) {
+        if (expr instanceof Operation) {
+            return transformOperation((Operation) expr);
+        } else if (expr instanceof VariableReference) {
+            return transformVarReference((VariableReference) expr);
+        } else {
+            return expr;
+        }
+    }
+
+    /**
+     * Hulpmethode: extraheert de int-waarde uit een Literal-expression.
+     */
+    private int extractValue(Expression expr) {
+        if (expr instanceof PixelLiteral) {
+            return ((PixelLiteral) expr).value;
+        } else if (expr instanceof PercentageLiteral) {
+            return ((PercentageLiteral) expr).value;
+        } else if (expr instanceof ScalarLiteral) {
+            return ((ScalarLiteral) expr).value;
+        } else {
+            throw new IllegalArgumentException("Unsupported expression type for value extraction: " + (expr == null ? "null" : expr.getClass()));
+        }
+    }
+
+    /**
      transformOperation(Operation operation): Deze methode evalueert een operatie en retourneert een Literal knoop met het resultaat van de operatie.
      */
     private Literal transformOperation(Operation operation) {
-        Expression left = operation.lhs;
-        Expression right = operation.rhs;
+        // transform beide zijden (als nodig)
+        Expression left = transformOperand(operation.lhs);
+        Expression right = transformOperand(operation.rhs);
 
-        int leftValue = 0;
-        int rightValue = 0;
-
-        if (left instanceof Operation) {
-            left = transformOperation((Operation) left);
-        } else if (left instanceof VariableReference) {
-            left = transformVarReference((VariableReference) left);
-        }
-
-        if (left instanceof PixelLiteral) {
-            leftValue = ((PixelLiteral) left).value;
-        } else if (left instanceof PercentageLiteral) {
-            leftValue = ((PercentageLiteral) left).value;
-        } else if (left instanceof ScalarLiteral) {
-            leftValue = ((ScalarLiteral) left).value;
-        }
-
-        if (right instanceof Operation) {
-            right = transformOperation((Operation) right);
-        } else if (right instanceof VariableReference) {
-            right = transformVarReference((VariableReference) right);
-        }
-
-        if (right instanceof PixelLiteral) {
-            rightValue = ((PixelLiteral) right).value;
-        } else if (right instanceof PercentageLiteral) {
-            rightValue = ((PercentageLiteral) right).value;
-        } else if (right instanceof ScalarLiteral) {
-            rightValue = ((ScalarLiteral) right).value;
-        }
+        // haal waarden
+        int leftValue = extractValue(left);
+        int rightValue = extractValue(right);
 
         if (operation instanceof AddOperation) {
             return operation((Literal) left, leftValue + rightValue);
@@ -187,7 +187,7 @@ public class Evaluator implements Transform {
      */
     private Literal operation(Literal literal, int value) {
         if (literal instanceof PercentageLiteral) {
-            return new PixelLiteral(value);
+            return new PercentageLiteral(value);
         } else if (literal instanceof PixelLiteral) {
             return new PixelLiteral(value);
         } else if (literal instanceof ScalarLiteral) {
@@ -215,7 +215,6 @@ public class Evaluator implements Transform {
      * verwijdert. Wanneer de conditie van de IfClause TRUE is wordt deze vervangen door de body van het if-statement.
      * Als de conditie FALSE is dan vervang je de IfClause door de body van de ElseClause. Als er geen ElseClause is bij een
      * negatieve conditie dan verwijder je de IfClause volledig uit de AST:
-     * <p>
      * Door IfClauses op deze manier te evalueren en te transformeren, wordt voldaan aan eis TR02, waarbij de AST wordt
      * aangepast op basis van de condities van de IfClauses.
      */

@@ -100,7 +100,7 @@ public class Checker {
             }
             case "width", "height" -> {
                 boolean ok = value instanceof PixelLiteral || value instanceof PercentageLiteral;
-                if (!ok) ok = raw instanceof Operation; // operatie mag ook, mits elders gevalideerd
+//                if (!ok) ok = raw instanceof Operation;
                 if (!ok) declaration.setError(property + " must have pixel or percentage value");
             }
             default -> declaration.setError("unknown property name");
