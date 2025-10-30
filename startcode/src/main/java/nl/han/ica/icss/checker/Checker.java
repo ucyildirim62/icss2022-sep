@@ -10,6 +10,7 @@ import nl.han.ica.icss.ast.operations.MultiplyOperation;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * CH01, CH02, CH03, CH04, CH05, CH06.
@@ -34,16 +35,17 @@ public class Checker {
     private void visit(ASTNode node) {
         if (node == null) return;
 
-        if (node instanceof Declaration declaration) {
-            checkDeclaration(declaration);
-        } else if (node instanceof Operation operation) {
-            checkOperation(operation);
-        } else if (node instanceof IfClause ifClause) {
-            checkIfClause(ifClause);
-        } else if (node instanceof VariableAssignment assignment) {
-            currentScope().put(assignment.name.name, assignment.expression);
-        } else if (node instanceof VariableReference reference) {
-            checkScope(reference);
+        if (node instanceof Declaration) {
+            checkDeclaration((Declaration) node);
+        } else if (node instanceof Operation) {
+            checkOperation((Operation) node );
+        } else if (node instanceof IfClause) {
+            checkIfClause((IfClause) node);
+        } else if (node instanceof VariableAssignment) {
+            VariableAssignment variableAssignment = (VariableAssignment) node;
+            currentScope().put(variableAssignment.name.name, variableAssignment.expression);
+        } else if (node instanceof VariableReference) {
+            checkScope((VariableReference) node);
         }
 
         if (!node.getChildren().isEmpty()) {
@@ -81,9 +83,9 @@ public class Checker {
 
     private Literal resolveToLiteral(Expression expression) {
         if (expression == null) return null;
-        if (expression instanceof Literal literal) return literal;
-        if (expression instanceof VariableReference ref) return resolveToLiteral(resolveVariable(ref));
-        if (expression instanceof Operation op) return checkOperation(op);
+        if (expression instanceof Literal) return (Literal) expression;
+        if (expression instanceof VariableReference) return resolveToLiteral(resolveVariable((VariableReference) expression));
+        if (expression instanceof Operation) return checkOperation((Operation) expression);
         return null;
     }
 
@@ -92,18 +94,12 @@ public class Checker {
         Literal value = resolveToLiteral(raw);
 
         String property = declaration.property.name;
-        switch (property) {
-            case "color", "background-color" -> {
-                if (!(value instanceof ColorLiteral)) {
-                    declaration.setError(property + " value can only be color literal");
-                }
-            }
-            case "width", "height" -> {
-                boolean ok = value instanceof PixelLiteral || value instanceof PercentageLiteral;
-//                if (!ok) ok = raw instanceof Operation;
-                if (!ok) declaration.setError(property + " must have pixel or percentage value");
-            }
-            default -> declaration.setError("unknown property name");
+        if ((Objects.equals(property, "color") || Objects.equals(property, "background-color")) && !(value instanceof ColorLiteral)) {
+                declaration.setError(property + " value can only be color literal");
+        }
+
+        if ((Objects.equals(property, "height") || Objects.equals(property, "width")) && !(value instanceof PixelLiteral || value instanceof PercentageLiteral)){
+            declaration.setError(property + " value can only be pixel literal");
         }
     }
 
@@ -137,8 +133,8 @@ public class Checker {
             return null;
         }
 
-        if (left instanceof Operation lop) left = checkOperation(lop);
-        if (right instanceof Operation rop) right = checkOperation(rop);
+        if (left instanceof Operation) left = checkOperation((Operation) left);
+        if (right instanceof Operation) right = checkOperation((Operation) right);
 
         Literal lLit = resolveToLiteral(left);
         Literal rLit = resolveToLiteral(right);
@@ -174,8 +170,8 @@ public class Checker {
 
 
     private Expression unwrap(Expression expr) {
-        if (expr instanceof VariableReference ref) {
-            Expression resolved = resolveVariable(ref);
+        if (expr instanceof VariableReference) {
+            Expression resolved = resolveVariable((VariableReference) expr);
             return resolved != null ? resolved : expr;
         }
         return expr;
@@ -184,8 +180,8 @@ public class Checker {
     private boolean containsType(Expression expr, Class<? extends Literal> literalClass) {
         if (expr == null) return false;
         if (literalClass.isInstance(expr)) return true;
-        if (expr instanceof VariableReference ref) return containsType(resolveVariable(ref), literalClass);
-        if (expr instanceof Operation op) return containsType(op.lhs, literalClass) || containsType(op.rhs, literalClass);
+        if (expr instanceof VariableReference) return containsType(resolveVariable((VariableReference) expr), literalClass);
+        if (expr instanceof Operation) return containsType(((Operation)expr).lhs, literalClass) || containsType(((Operation)expr).rhs, literalClass);
         return false;
     }
 

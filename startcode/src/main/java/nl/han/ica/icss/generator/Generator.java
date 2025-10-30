@@ -25,15 +25,15 @@ public class Generator {
 
 		visit(ast.root, 0);
 
-		if (out.isEmpty() || out.charAt(out.length() - 1) != '\n') out.append('\n');
+		if (out.length() == 0 || out.charAt(out.length() - 1) != '\n') out.append('\n');
 		return out.toString();
 	}
 
 	private void visit(ASTNode node, int level) {
 		if (node == null) return;
 
-		if (node instanceof Stylerule rule) {
-			writeStyleRule(rule, level);
+		if (node instanceof Stylerule) {
+			writeStyleRule((Stylerule) node, level);
 			return;
 		}
 
@@ -52,8 +52,8 @@ public class Generator {
 		indent(level).append(selectorList).append(" {\n");
 
 		for (ASTNode child : rule.getChildren()) {
-			if (child instanceof Declaration decl) {
-				writeDeclaration(decl, level + 1);
+			if (child instanceof Declaration) {
+				writeDeclaration((Declaration) child, level + 1);
 			}
 		}
 
@@ -70,9 +70,9 @@ public class Generator {
 
 	private String expressionToString(Expression expression) {
 		if (expression == null) return "";
-		if (expression instanceof PercentageLiteral p) return p.value + "%";
-		if (expression instanceof PixelLiteral px) return px.value + "px";
-		if (expression instanceof ColorLiteral c) return c.value;
+		if (expression instanceof PercentageLiteral) return ((PercentageLiteral) expression).value + "%";
+		if (expression instanceof PixelLiteral) return ((PixelLiteral) expression).value + "px";
+		if (expression instanceof ColorLiteral) return ((ColorLiteral) expression).value;
 
 
 		return String.valueOf(expression);
